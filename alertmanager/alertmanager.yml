@@ -11,8 +11,8 @@ route:
 receivers:
 - name: 'telegram-notifications'
   telegram_configs:
-  - bot_token: '8243914704:AAHkEaTlpa-LTQjaoRQt5FgtFbFYssG7OeA'
-    chat_id: 662809656
+  - bot_token: '<API>'
+    chat_id: <ID>
     send_resolved: true
     parse_mode: 'HTML'
 
