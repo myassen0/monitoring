@@ -1,0 +1,176 @@
+groups:
+# ================================
+# 🔮 Predictive Alerts (Early Warnings / Trends)
+# ================================
+- name: predictive_alerts
+  rules:
+    # -------------------------
+    # CPU Alerts
+    # -------------------------
+    - alert: PredictiveHighCPUTrend
+      expr: (1 - avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 70
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "CPU trend on {{ $labels.instance }} is growing"
+        description: "CPU usage: {{ $value | humanize }}% for 10 minutes. This could indicate future saturation."
+
+    - alert: PredictiveCPUCloseToCritical
+      expr: (1 - avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 75
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "CPU usage on {{ $labels.instance }} is near critical level"
+        description: "CPU usage: {{ $value | humanize }}% for 15 minutes. Consider scaling or investigating."
+
+    # -------------------------
+    # Memory Alerts
+    # -------------------------
+    - alert: PredictiveHighMemoryTrend
+      expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 70
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Memory trend on {{ $labels.instance }} is growing"
+        description: "Memory usage: {{ $value | humanize }}% for 10 minutes. This may lead to exhaustion."
+
+    - alert: PredictiveMemoryCloseToCritical
+      expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Memory usage on {{ $labels.instance }} is near critical"
+        description: "Memory usage: {{ $value | humanize }}% for 15 minutes. May soon reach critical threshold."
+
+    # -------------------------
+    # Disk Alerts
+    # -------------------------
+    - alert: PredictiveDiskUsageGrowth
+      expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 75
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Disk usage on {{ $labels.instance }} is increasing"
+        description: "Disk usage: {{ $value | humanize }}% for 15 minutes. Possible risk of running out of space soon."
+
+    - alert: PredictiveDiskCloseToCritical
+      expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 80
+      for: 30m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Disk usage on {{ $labels.instance }} is near critical"
+        description: "Disk usage: {{ $value | humanize }}% for 30 minutes. Approaching critical levels."
+
+    # -------------------------
+    # Network Alerts
+    # -------------------------
+    - alert: PredictiveHighNetworkLatency
+      expr: probe_duration_seconds > 0.5
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High network latency detected on {{ $labels.instance }}"
+        description: "Network latency has been above 0.5s for more than 10 minutes. May lead to timeouts."
+
+    - alert: PredictivePacketDrops
+      expr: increase(node_network_receive_drop_total[10m]) > 100
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Packet drops increasing on {{ $labels.instance }}"
+        description: "More than 100 packets dropped in the last 10 minutes. Possible network issues."
+
+    # -------------------------
+    # Oracle DB Alerts
+    # -------------------------
+    - alert: PredictiveHighOracleSessions
+      expr: oracledb_sessions_active > 80
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Oracle DB active sessions trend increasing"
+        description: "Oracle DB active sessions exceeded 80 for more than 10 minutes. Risk of overload."
+
+    - alert: PredictiveTablespaceGrowth
+      expr: (oracledb_tablespace_bytes - oracledb_tablespace_free_bytes) / oracledb_tablespace_bytes * 100 > 75
+      for: 30m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Oracle DB tablespace usage is growing"
+        description: "Tablespace usage is above 75% for 30 minutes. Approaching critical threshold."
+
+    # -------------------------
+    # Container Alerts
+    # -------------------------
+    - alert: PredictiveContainerHighMemoryTrend
+      expr: (container_memory_working_set_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 70
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Container {{ $labels.name }} memory usage trend is high"
+        description: "Container '{{ $labels.name }}' has been using {{ $value | humanize }}% of its memory limit for 15 minutes."
+
+    - alert: PredictiveContainerFrequentRestarts
+      expr: increase(container_restart_count_total[30m]) > 2
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Container {{ $labels.name }} is restarting frequently"
+        description: "Container '{{ $labels.name }}' restarted more than 2 times in the last 30 minutes."
+
+# ================================
+# 🐳 Container Status Alerts
+# ================================
+- name: container_status_alerts
+  rules:
+    # Container Memory Alerts
+    - alert: ContainerHighMemoryUsage
+      expr: (container_memory_working_set_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 70
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Container {{ $labels.name }} memory usage is high"
+        description: "Container '{{ $labels.name }}'  is using {{ $value | humanize }}% of its memory limit"
+
+    - alert: ContainerHighMemoryUsageAbsolute
+      expr: container_memory_working_set_bytes{name!=""} > 4e9
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Container {{ $labels.name }} is using a large amount of memory"
+        description: "Container '{{ $labels.name }}' is consuming {{ $value | humanize }} bytes"
+
+    # Container Down / Exited
+    - alert: ContainerDown
+      expr: container_status == 0
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Container {{ $labels.container_name }} is down"
+        description: "Container '{{ $labels.container_name }}' has status '{{ $labels.status }}' for 2 minutes"
+
+    # Container Paused / Other
+    - alert: ContainerOtherState
+      expr: container_status == -1
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Container {{ $labels.container_name }} in unusual state"
+        description: "Container '{{ $labels.container_name }}' has status '{{ $labels.status }}'"
+
