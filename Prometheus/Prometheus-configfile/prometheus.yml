@@ -1,0 +1,65 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Load and evaluate alerting rules
+rule_files:
+  - "alert_rules.yml"
+
+# Configure Alertmanager
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - '192.168.1.101:9093' # Alertmanager IP and port
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['192.168.1.101:9090']
+        labels:
+          environment: 'production'
+          team: 'monitoring'
+
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['192.168.1.102:9100', '192.168.1.100:9100', '192.168.1.101:9100']
+        labels:
+          environment: 'production'
+          team: 'ops'
+
+  - job_name: 'cadvisor'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['192.168.1.100:8081']
+        labels:
+          environment: 'production'
+          team: 'ops'
+
+  - job_name: 'oracle_db'
+    static_configs:
+      - targets: ['192.168.1.100:9161']
+        labels:
+          environment: 'production'
+          team: 'dba'
+
+
+
+  # Add this new job to your scrape_configs section in prometheus.yml
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]  # Use the 'http_2xx' module from the blackbox.yml
+    static_configs:
+      - targets:
+        - http://192.168.1.100:8080   # Your ORDS/APEX Middleware
+        - http://192.168.1.100:9161   # Your Oracle DB Exporter
+        - http://192.168.1.102:3000   # Your Grafana Dashboard
+        - http://192.168.1.101:9090   # Your Prometheus Server
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 192.168.1.100:9115  # The IP and port of the blackbox exporter
