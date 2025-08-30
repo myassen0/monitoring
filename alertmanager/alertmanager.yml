@@ -1,0 +1,20 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname']
+  group_wait: 1s                               # Reduced from 5s to 1s
+  group_interval: 1s                           # Group updates every 1 minute
+  repeat_interval: 5m                          # Increased from 15m to 2h to reduce spam
+  receiver: 'telegram-notifications'
+
+receivers:
+- name: 'telegram-notifications'
+  telegram_configs:
+  - bot_token: '8243914704:AAHkEaTlpa-LTQjaoRQt5FgtFbFYssG7OeA'
+    chat_id: 662809656
+    send_resolved: true
+    parse_mode: 'HTML'
+
+templates:
+- '/etc/alertmanager/templates/telegram.tmpl'
