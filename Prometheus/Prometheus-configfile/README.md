@@ -68,7 +68,39 @@ alerting:
         team: 'ops'
 ```
 
-* Collects system metrics (CPU, Memory, Disk, Network) from servers.
+* **Description:**
+  Node Exporter collects system metrics such as CPU, Memory, Disk, and Network usage from servers.
+  Additionally, it reads metrics from the **Textfile Collector** at `/var/lib/node_exporter/textfile_collector`, where a custom script writes Docker container metrics.
+
+* **Metrics Collected from the Script:**
+
+  1. `container_status`: Numeric status of containers.
+
+     * `1` = Running
+     * `0` = Exited
+     * `-1` = Paused
+     * `-2` = Dead / CrashLoop
+     * `-3` = Other
+       Example: `container_status{container_id="abcd123",container_name="nginx",status="Up 3 hours"} 1`
+  2. `container_info`: Detailed container metadata.
+
+     * Fields include container ID, name, image, created time, status, and exposed ports.
+       Example: `container_info{container_id="abcd123",container_name="nginx",image="nginx:latest",created="2025-08-30T14:12:00Z",status="Up 3 hours",ports="80/tcp"} 1`
+
+* **Script Functionality:**
+
+  1. Loops over all Docker containers and determines a numeric status value.
+  2. Generates metrics for container status and full container info.
+  3. Writes output atomically to the textfile collector directory.
+  4. The script is scheduled via cron to run every minute for near real-time updates.
+
+* **Cron Job Example:**
+
+```bash
+* * * * * /usr/local/bin/collect_container_metrics.sh
+```
+
+This setup allows Prometheus to monitor both host-level metrics and Docker container metrics through Node Exporter.
 
 ### 4.3 cAdvisor
 
@@ -154,6 +186,39 @@ Each alert contains:
 * `for`: Duration the condition must persist before firing the alert.
 * `labels`: Additional metadata (e.g., severity).
 * `annotations`: Alert description, summary, and detailed message.
+
+---
+
+## 6. Container Metrics via Node Exporter Textfile Collector
+
+To monitor container states, a custom Bash script collects metrics from Docker and writes them to a textfile that Node Exporter reads.
+
+#### Script Overview
+
+* **Path:** `/var/lib/node_exporter/textfile_collector/container_status.prom`
+* **Functionality:**
+
+  1. Loops through all Docker containers.
+  2. Generates a numeric status metric:
+
+     * `1` = Running
+     * `0` = Exited
+     * `-1` = Paused
+     * `-2` = Dead / CrashLoop
+     * `-3` = Other
+  3. Generates full container info metrics including ID, name, image, created time, status, and ports.
+  4. Atomically replaces the old metrics file to ensure consistency.
+* **Node Exporter:** Reads this textfile and exposes `container_status` and `container_info` metrics to Prometheus.
+
+#### Cron Job
+
+* The script is scheduled to run every minute:
+
+```bash
+* * * * * /usr/local/bin/collect_container_metrics.sh
+```
+
+This ensures near real-time updates of container status and info for Prometheus monitoring.
 
 ---
 
