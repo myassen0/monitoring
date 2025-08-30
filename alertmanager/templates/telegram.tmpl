@@ -1,0 +1,29 @@
+{{ define "telegram.default.message" }}
+{{/* Firing Alerts Section */}}
+{{ if gt (len .Alerts.Firing) 0 }}
+<b>🔥 FIRING: {{ .Alerts.Firing | len }} alert(s)</b>
+{{ range .Alerts.Firing }}
+---
+<b>Alert:</b> {{ .Annotations.summary }}
+<b>Severity:</b> {{ .Labels.severity }}
+<b>Instance:</b> <code>{{ .Labels.instance }}</code>
+{{ if .Annotations.description }}
+<b>Details:</b> {{ .Annotations.description }}
+{{ end }}
+<a href="{{ .GeneratorURL }}">Graph</a>
+{{ end }}
+{{ end }}
+
+{{/* Resolved Alerts Section */}}
+{{ if gt (len .Alerts.Resolved) 0 }}
+<b>✅ RESOLVED: {{ .Alerts.Resolved | len }} alert(s)</b>
+{{ range .Alerts.Resolved }}
+---
+<b>Alert:</b> {{ .Annotations.summary }}
+<b>Instance:</b> <code>{{ .Labels.instance }}</code>
+{{ if .Annotations.description }}
+<b>Details:</b> {{ .Annotations.description }}
+{{ end }}
+{{ end }}
+{{ end }}
+{{ end }}
